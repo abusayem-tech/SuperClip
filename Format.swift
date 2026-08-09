@@ -13,7 +13,7 @@ struct Config: Codable, Equatable {
         retentionDays: 30,
         maxStorageMB: 500,
         excludeApps: [],
-        menubarMode: .lastText,
+        menubarMode: .iconOnly,
         pollIntervalMs: 500,
         mergeTextWindowMs: 1500
     )

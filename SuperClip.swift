@@ -29,9 +29,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PanelDelegate, Prefere
     private var runActivity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // LSUIElement agents with no windows are eligible for AppKit automatic
-        // termination; without this the process exits within seconds and the
-        // menubar icon never sticks.
         ProcessInfo.processInfo.disableAutomaticTermination("SuperClip clipboard monitor")
         ProcessInfo.processInfo.disableSuddenTermination()
         runActivity = ProcessInfo.processInfo.beginActivity(
@@ -40,20 +37,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PanelDelegate, Prefere
         )
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // No autosaveName: it persists a hidden state that silently keeps the
+        // item off the menu bar forever once macOS or the user hides it.
+        statusItem.isVisible = true
         if let button = statusItem.button {
-            let image = NSImage(
-                systemSymbolName: "doc.on.clipboard",
-                accessibilityDescription: "SuperClip"
-            )
-            image?.isTemplate = true
-            button.image = image
+            button.image = MenubarIcon.make()
             button.imagePosition = .imageLeading
-            button.toolTip = "SuperClip"
+            button.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+            button.toolTip = "SuperClip — click for clipboard history"
             button.target = self
             button.action = #selector(togglePanel)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        statusItem.isVisible = true
 
         panel.delegate = self
         popover.contentViewController = panel
@@ -76,6 +71,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PanelDelegate, Prefere
             name: NSWorkspace.didWakeNotification,
             object: nil
         )
+
+        // The menu bar can silently swallow an item (full bar, notch, hidden
+        // state). Record where it actually landed so problems are diagnosable.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.logStatusItemPlacement()
+        }
+    }
+
+    private func logStatusItemPlacement() {
+        let button = statusItem.button
+        let window = button?.window
+        let screen = NSScreen.main
+        var lines = [
+            "launched \(Date())",
+            "isVisible=\(statusItem.isVisible)",
+            "length=\(statusItem.length)",
+            "title=\"\(button?.title ?? "nil")\"",
+            "hasImage=\(button?.image != nil)",
+            "buttonFrame=\(button?.frame ?? .zero)",
+            "windowFrame=\(window?.frame ?? .zero)",
+        ]
+        if let screen {
+            lines.append("screenFrame=\(screen.frame)")
+            lines.append("visibleFrame=\(screen.visibleFrame)")
+            if #available(macOS 12.0, *) {
+                lines.append("safeAreaTop=\(screen.safeAreaInsets.top)")
+            }
+        }
+        if let window, let screen {
+            let offScreen = !screen.frame.intersects(window.frame)
+            lines.append("offScreen=\(offScreen)")
+        }
+        let text = lines.joined(separator: "\n") + "\n"
+        let url = Storage.shared.supportDirectory.appendingPathComponent("launch.log")
+        try? text.write(to: url, atomically: true, encoding: .utf8)
     }
 
     @objc private func handleWake() {
@@ -90,6 +120,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PanelDelegate, Prefere
             self?.runCleanup()
         }
         cleanupTimer?.tolerance = day * 0.2
+        if let cleanupTimer {
+            RunLoop.main.add(cleanupTimer, forMode: .common)
+        }
     }
 
     private func runCleanup() {
@@ -146,19 +179,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PanelDelegate, Prefere
 
     private func renderStatus() {
         guard let button = statusItem.button else { return }
-        switch config.menubarMode {
-        case .iconOnly:
-            button.title = ""
-        case .lastText:
-            if let last = lastItem, last.type != .image {
-                button.title = last.menubarPreview
-            } else {
-                button.title = ""
-            }
-        case .count:
-            let count = Storage.shared.itemCount()
-            button.title = count > 0 ? "\(count)" : ""
-        }
+        button.title = ""
+        button.image = MenubarIcon.make()
+        button.imagePosition = .imageLeading
     }
 
     private func flashStatus() {

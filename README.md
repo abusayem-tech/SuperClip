@@ -23,6 +23,15 @@ History lives under `~/Library/Application Support/SuperClip/`.
 ## Install
 
 ```bash
+./install.sh
+```
+
+This builds, copies to `/Applications/SuperClip.app`, registers a LaunchAgent
+(start at login + keep alive), and launches the app.
+
+Or manually:
+
+```bash
 ./build.sh
 open SuperClip.app
 ```
@@ -129,7 +138,7 @@ xcrun stapler staple SuperClip-1.0.dmg
 
 | Issue | Fix |
 |---|---|
-| No menubar icon | Confirm the process is running; check for crash in Console.app |
+| No menubar icon | Look for **Clip** text near the clock. On macOS 26+ it may be in the menu bar **overflow** (chevron/arrow near Control Center) — drag it out if needed. Run `./install.sh` to reinstall with KeepAlive. |
 | App won’t open | System Settings → Privacy & Security → Open Anyway |
 | History empty | Copy something after launch; check excludeApps isn’t too broad |
 | Disk growing | Lower `maxStorageMB`, shorten retention, or Clear History |

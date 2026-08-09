@@ -17,6 +17,7 @@ SOURCES=(
   Storage.swift
   PasteboardMonitor.swift
   Components.swift
+  MenubarIcon.swift
   PanelController.swift
   PreferencesController.swift
 )
@@ -49,7 +50,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <dict>
   <key>CFBundleName</key><string>SuperClip</string>
   <key>CFBundleDisplayName</key><string>SuperClip</string>
-  <key>CFBundleIdentifier</key><string>dev.nasimulhasan.superclip</string>
+  <key>CFBundleIdentifier</key><string>dev.nasimulhasan.superclipbar</string>
   <key>CFBundleExecutable</key><string>SuperClip</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
@@ -58,9 +59,6 @@ cat > "$CONTENTS/Info.plist" <<PLIST
   <key>NSHumanReadableCopyright</key><string>SuperClip</string>
   <!-- Menubar-only: no Dock icon, no app switcher entry. -->
   <key>LSUIElement</key><true/>
-  <!-- Keep the agent alive; otherwise AppKit quits it when it has no windows. -->
-  <key>NSSupportsAutomaticTermination</key><false/>
-  <key>NSSupportsSuddenTermination</key><false/>
 </dict>
 </plist>
 PLIST
@@ -71,10 +69,13 @@ IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null \
 if [[ -n "$IDENTITY" ]]; then
   echo "Signing with: $IDENTITY"
   codesign --force --options runtime --timestamp \
+    --identifier dev.nasimulhasan.superclipbar \
     --sign "$IDENTITY" "$APP"
 else
   echo "No Developer ID found — signing ad-hoc (recipients will see a Gatekeeper warning)."
-  codesign --force --sign - "$APP"
+  # A stable identifier keeps Control Center from treating each rebuild as a new
+  # menu bar app, which would drop it from "Allow in the Menu Bar".
+  codesign --force --identifier dev.nasimulhasan.superclipbar --sign - "$APP"
 fi
 
 codesign --verify --verbose=1 "$APP" 2>&1 | sed 's/^/  /'
