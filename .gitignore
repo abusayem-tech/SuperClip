@@ -1,0 +1,5 @@
+SuperClip.app/
+build-tmp/
+dmg-staging/
+SuperClip-*.dmg
+.DS_Store
