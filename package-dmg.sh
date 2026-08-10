@@ -39,8 +39,13 @@ SuperClip — menubar clipboard manager
        "Open Anyway" next to the SuperClip message.
    You only do this once.
 
-3. Launch SuperClip. A clipboard icon appears in the menubar.
+3. Launch SuperClip (double-click or drag to Applications first).
+   A clipboard icon appears in the menubar — icon only, no text label.
    Click for history; right-click for Clear / Preferences / Quit.
+
+   On macOS 26+: if the icon doesn't show, open
+   System Settings > Control Center > Allow in the Menu Bar
+   and turn SuperClip ON. You may also find it in the menu bar overflow (»).
 
 4. Optional config (created automatically on first launch):
 
