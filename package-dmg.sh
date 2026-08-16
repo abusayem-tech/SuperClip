@@ -9,7 +9,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP="SuperClip.app"
+APP="build/SuperClip.app"
 VOLNAME="SuperClip"
 VERSION=$(defaults read "$PWD/$APP/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "1.0")
 DMG="SuperClip-$VERSION.dmg"

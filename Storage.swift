@@ -161,13 +161,23 @@ final class Storage {
 
     // MARK: - Query
 
+    func item(id: Int64) -> ClipboardItem? {
+        queue.sync { fetchItem(id: id) }
+    }
+
     func items(
         filter: QuickFilter,
         search: String,
         limit: Int = 500
     ) -> [ClipboardItem] {
         queue.sync {
-            var sql = "SELECT * FROM items WHERE 1=1"
+            // Skip html/rtf blobs so opening the panel stays instant.
+            var sql = """
+            SELECT id, type, substr(text_content, 1, 400), NULL, NULL, url, file_paths,
+                   image_path, content_hash, source_app, source_bundle_id, is_pinned,
+                   is_snippet, title, created_at, updated_at
+            FROM items WHERE 1=1
+            """
             var args: [Any] = []
 
             switch filter {

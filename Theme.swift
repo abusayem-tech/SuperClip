@@ -1,10 +1,12 @@
 import AppKit
 
 enum Theme {
-    static let panelWidth: CGFloat = 360
-    static let panelHeight: CGFloat = 480
+    static let panelWidth: CGFloat = 380
+    static let panelHeight: CGFloat = 520
     static let gutter: CGFloat = 12
     static let thumbnailHeight: CGFloat = 48
+    static let panelCornerRadius: CGFloat = 10
+    static let statsBarHeight: CGFloat = 82
 
     static let title = NSFont.systemFont(ofSize: 13, weight: .semibold)
     static let body = NSFont.systemFont(ofSize: 12, weight: .regular)

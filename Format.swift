@@ -105,7 +105,33 @@ enum Format {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
-        return formatter.string(fromByteCount: bytes)
+        return formatter.string(fromByteCount: max(0, bytes))
+    }
+
+    static func bytesString(_ bytes: UInt64) -> String {
+        bytesString(Int64(clamping: bytes))
+    }
+
+    static func rateString(_ bytesPerSec: Double) -> String {
+        guard bytesPerSec.isFinite else { return "0 KB/s" }
+        let n = min(max(0, bytesPerSec), Double(Int64.max / 4)).rounded()
+        return bytesString(Int64(n)) + "/s"
+    }
+
+    /// Live bandwidth in Mbps. Width is fixed so columns do not move.
+    static func compactRate(_ bytesPerSec: Double) -> String {
+        let mbps: Double
+        if bytesPerSec.isFinite, bytesPerSec > 0 {
+            mbps = min(bytesPerSec * 8 / 1_000_000, 9999.9)
+        } else {
+            mbps = 0
+        }
+        return String(format: "%5.1f Mbps", mbps)
+    }
+
+    static func percent(_ value: Double) -> String {
+        let n = value.isFinite ? min(max(0, value), 100) : 0
+        return String(format: "%3d%%", Int(n.rounded()))
     }
 
     static func sha256Hex(_ data: Data) -> String {

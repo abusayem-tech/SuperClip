@@ -1,4 +1,5 @@
 SuperClip.app/
+build/
 build-tmp/
 dmg-staging/
 SuperClip-*.dmg

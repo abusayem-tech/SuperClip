@@ -3,14 +3,7 @@ import AppKit
 enum MenubarIcon {
     /// Guaranteed-visible menubar glyph — SF Symbols can fail silently on some builds.
     static func make() -> NSImage {
-        if let symbol = NSImage(
-            systemSymbolName: "doc.on.clipboard",
-            accessibilityDescription: "SuperClip"
-        ) {
-            symbol.isTemplate = true
-            return symbol
-        }
-        return drawnIcon()
+        drawnIcon()
     }
 
     private static func drawnIcon() -> NSImage {
@@ -21,7 +14,7 @@ enum MenubarIcon {
         NSColor.labelColor.setFill()
 
         let board = NSBezierPath(roundedRect: NSRect(x: 3, y: 2, width: 12, height: 14), xRadius: 2, yRadius: 2)
-        board.lineWidth = 1.4
+        board.lineWidth = 1.6
         board.stroke()
 
         let clip = NSBezierPath()

@@ -29,6 +29,8 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
     private let tableView = ClickCopyTableView()
     private let emptyState = EmptyStateView()
     private let footer = NSTextField.plain(font: Theme.caption, color: Theme.faint)
+    private let statsBar = StatsBarView()
+    private var isDirty = true
 
     override func loadView() {
         let root = NSView(frame: NSRect(x: 0, y: 0, width: Theme.panelWidth, height: Theme.panelHeight))
@@ -91,8 +93,12 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
         footerRow.translatesAutoresizingMaskIntoConstraints = false
         footer.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
-        let stack = NSStackView(views: [searchField, filterControl, scrollView, footerRow])
+        statsBar.translatesAutoresizingMaskIntoConstraints = false
+        let divider = NSView.divider()
+
+        let stack = NSStackView(views: [searchField, filterControl, scrollView, footerRow, divider, statsBar])
         stack.orientation = .vertical
+        stack.alignment = .leading
         stack.spacing = 8
         stack.edgeInsets = NSEdgeInsets(
             top: Theme.gutter, left: Theme.gutter, bottom: Theme.gutter, right: Theme.gutter
@@ -101,24 +107,36 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
         root.addSubview(stack)
         root.addSubview(emptyState)
 
+        let contentWidth = Theme.panelWidth - Theme.gutter * 2
+        preferredContentSize = NSSize(width: Theme.panelWidth, height: Theme.panelHeight)
+
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             stack.topAnchor.constraint(equalTo: root.topAnchor),
             stack.bottomAnchor.constraint(equalTo: root.bottomAnchor),
             searchField.heightAnchor.constraint(equalToConstant: 28),
+            searchField.widthAnchor.constraint(equalToConstant: contentWidth),
             filterControl.heightAnchor.constraint(equalToConstant: 24),
+            filterControl.widthAnchor.constraint(equalToConstant: contentWidth),
+            scrollView.widthAnchor.constraint(equalToConstant: contentWidth),
             emptyState.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             emptyState.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             emptyState.topAnchor.constraint(equalTo: scrollView.topAnchor),
             emptyState.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             footerRow.heightAnchor.constraint(equalToConstant: 20),
+            footerRow.widthAnchor.constraint(equalToConstant: contentWidth),
+            divider.widthAnchor.constraint(equalToConstant: contentWidth),
+            statsBar.heightAnchor.constraint(equalToConstant: Theme.statsBarHeight),
+            statsBar.widthAnchor.constraint(equalToConstant: contentWidth),
         ])
     }
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        reload()
+        DispatchQueue.main.async { [weak self] in
+            self?.statsBar.start()
+        }
         if !UserDefaults.standard.bool(forKey: "hasSeenFirstRunTip") {
             UserDefaults.standard.set(true, forKey: "hasSeenFirstRunTip")
         }
@@ -131,13 +149,27 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
 
     override func viewDidDisappear() {
         super.viewDidDisappear()
+        statsBar.stop()
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
         }
     }
 
+    func noteDataChanged() {
+        if view.window?.isVisible == true {
+            reload()
+        } else {
+            isDirty = true
+        }
+    }
+
+    func prepareForDisplay() {
+        if isDirty { reload() }
+    }
+
     func reload() {
+        isDirty = false
         items = Storage.shared.items(filter: filter, search: searchText)
         tableView.reloadData()
         let showEmpty = items.isEmpty
@@ -164,10 +196,15 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
         copyRow(tableView.selectedRow)
     }
 
+    private func itemForRow(_ row: Int) -> ClipboardItem? {
+        guard row >= 0, row < items.count else { return nil }
+        return Storage.shared.item(id: items[row].id) ?? items[row]
+    }
+
     private func copyRow(_ row: Int) {
-        guard row >= 0, row < items.count else { return }
+        guard let item = itemForRow(row) else { return }
         tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-        PasteboardWriter.write(items[row])
+        PasteboardWriter.write(item)
         delegate?.panelDidCopyItem()
     }
 
@@ -213,8 +250,8 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
     }
 
     private func copyAs(_ format: CopyAsFormat, row: Int) {
-        guard row >= 0, row < items.count else { return }
-        PasteboardWriter.write(items[row], format: format)
+        guard let item = itemForRow(row) else { return }
+        PasteboardWriter.write(item, format: format)
         delegate?.panelDidCopyItem()
     }
 
@@ -291,8 +328,8 @@ final class PanelController: NSViewController, NSSearchFieldDelegate, NSTableVie
     }
 
     func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
-        guard row >= 0, row < items.count else { return nil }
-        return DragItem(item: items[row])
+        guard let item = itemForRow(row) else { return nil }
+        return DragItem(item: item)
     }
 
     // MARK: - Context menu
